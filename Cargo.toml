@@ -1,0 +1,6 @@
+[package]
+name = "json_parser"
+version = "0.1.0"
+authors = ["Jure <jure.semrov@outlook.com>"]
+
+[dependencies]
