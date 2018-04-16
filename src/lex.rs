@@ -74,6 +74,7 @@ impl<'src> Lex<'src> {
 
     }
 
+
     fn read_string(mut source : &'src [u8]) -> (TokenType,&'src [u8])
     {
         let mut buffer = String::new();
@@ -135,6 +136,71 @@ impl<'src> Lex<'src> {
             }
         }
         (TokenType::String(buffer),source)
+    }
+
+    /// Reads a Unicode escape sequence, sequence after '\u'
+    /// Reads two escape sequences, if the first is leading surrogate
+    /// Invalid or incomplete sequences are replaced by 
+    /// 'REPLACEMENT CHARACTER' (U+FFFD)
+    fn read_unicode_escape(mut source : &'src [u8]) -> (char, &'src [u8])
+    {
+        let code_point = match Self::read_unit(source)
+        {
+            (Some(cp1 @ 0xD800..=0xDBFF),rest) =>
+            {
+                let (cp2, rest) = match *rest
+                {
+                    [b'\\', b'u', ref rest..] => Self::read_unit(rest),
+                    _ => (None, rest),
+                };
+                source = rest;
+
+                if let Some(cp2 @ 0xDC00..=0xDFFF) = cp2
+                {
+                    Some(0x1_0000 + (((cp1 - 0xD800) << 10) | (cp2 - 0xDC00)))
+                }
+                else 
+                {
+                    None
+                }
+            }
+            (cp,rest) => {source = rest; cp}
+        };
+
+        let cp = code_point.and_then(char::from_u32).unwrap_or('\u{FFFD}');
+        (cp,source)
+    }
+
+    /// Reads the body of a JSON Unicode escape sequence
+    /// Returns u32 on success, None if this is not a correct 
+    /// escape sequence
+    fn read_unit(mut source : &'src [u8]) -> (Option<u32>,&'src[u8])
+    {
+        let mut unit = 0u16;
+        for _ in 0..4
+        {
+            let digit = match *source
+            {
+                [b @ b'0'..=b'9', ref rest..] => 
+                {
+                    source = rest;
+                    (b - b'0') as u16
+                },
+                [b @ b'A'..=b'F', ref rest..] => 
+                {
+                    source = rest;
+                    (b - b'A' ) as u16 + 10
+                },
+                [b @ b'a'..=b'f', ref rest..] => 
+                {
+                    source = rest;
+                    (b - b'a' ) as u16 + 10
+                },
+                _ => return (None,source),
+            };
+            unit = (unit << 4) + digit;
+        }
+        (Some(unit as u32),source)
     }
 }
 
