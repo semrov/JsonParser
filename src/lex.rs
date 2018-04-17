@@ -208,7 +208,7 @@ impl<'src> Lex<'src> {
     {
         let is_positive = match *source
         {
-            [b'-', ref rest..] => false,
+            [b'-', ref rest..] => {source = rest; false},
             _ => true,
         };
 
