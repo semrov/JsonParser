@@ -44,7 +44,7 @@ impl<'src> Lex<'src> {
     {
         Lex{source : source.as_bytes()}
     }
-
+/*
     ///Get next token from lexer
     pub(crate) fn next(&mut self) -> Token<'src>
     {
@@ -73,6 +73,7 @@ impl<'src> Lex<'src> {
         };
 
     }
+    */
 
 
     fn read_string(mut source : &'src [u8]) -> (TokenType,&'src [u8])
@@ -201,6 +202,107 @@ impl<'src> Lex<'src> {
             unit = (unit << 4) + digit;
         }
         (Some(unit as u32),source)
+    }
+
+    fn read_number(mut source : &'src [u8]) -> (TokenType, &'src [u8])
+    {
+        let is_positive = match *source
+        {
+            [b'-', ref rest..] => false,
+            _ => true,
+        };
+
+        let mut decimal_part : u64;
+        match *source
+        {
+            [b'0', ref rest..] => 
+            {
+                source = rest;
+                decimal_part = 0;
+            },
+            [b @ b'1'..=b'9', ref rest..] => 
+            {
+                source = rest;
+                decimal_part = (b - b'0') as u64;
+                while let [d @ b'0'..=b'9', ref rest..] = *source {
+                    source = rest;
+                    let d = (d - b'0') as u64; 
+                    decimal_part = decimal_part * 10 + d;
+                }
+            },
+            _ => return (TokenType::Error,source),
+        }
+
+        let mut exp : i32 = 0;
+        if let [b'.', ref rest..] = *source
+        {
+            source = rest;
+            let mut any_digits = false;
+            while let [d @ b'0'..=b'9'] = *source {
+                let d = (d - b'0') as u64;
+                decimal_part = decimal_part * 10 + d;
+                exp -= 1;
+            }
+            if !any_digits
+            {
+                return (TokenType::Error,source);
+            }
+        }
+
+        let (has_exp,rest) = match *source
+        {
+            [b'e', ref rest..] | [b'E', ref rest..] => (true,rest),
+            _ => (false,source),
+        };
+
+        if has_exp
+        {
+            source = rest;
+            let is_pos_exp = match *source
+            {
+                [b'+', ref rest..] => {source = rest; true},
+                [b'-', ref rest..] => {source = rest; false},
+                _ => true,
+            };
+
+            let mut exlicit_exp = 0;
+            let mut any_digits = false;
+            while let [d @ b'0'..=b'9', ref rest..] = *source
+            {
+                source = rest;
+                any_digits = true;
+                let d = (d - b'0') as i32;
+                exlicit_exp = 10*exlicit_exp + d;
+            }
+            if !any_digits
+            {
+                return (TokenType::Error,source);
+            }
+            if is_pos_exp
+            {
+                exp += exlicit_exp;
+            }
+            else 
+            {
+                exp -= exlicit_exp;
+            }
+        }
+
+           let mut val = decimal_part as f64;
+           for _ in 0..i32::abs(exp)
+           {
+               if exp > 0
+               {
+                   val *= 10.0;
+               }
+               else 
+               {
+                   val /= 10.0;
+               }
+           }
+           if !is_positive {val = -val;}
+
+        (TokenType::Number(val),source)
     }
 }
 
