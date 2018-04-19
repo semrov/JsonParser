@@ -97,10 +97,9 @@ impl<'src> Lex<'src> {
                 [b'\\', b't', ref rest..] => {source = rest; buffer.push_str("\t");},
                 [b'\\', b'u', ref rest..] => 
                 {
-                    //add function reading unicode escape
-
+                    let (c,rest) = Self::read_unicode_escape(rest);
+                    buffer.push(c);
                     source = rest; 
-                    buffer.push_str("");
                 },
 
                 //UTF8 codepoints
