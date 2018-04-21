@@ -12,7 +12,7 @@ pub(crate) struct Lex<'src> {
 #[derive(Debug,PartialEq)]
 pub(crate) struct Token<'src> 
 {
-    pub(crate) span : &'src [u8],
+    pub(crate) span : &'src str,
     pub(crate) token_type : TokenType
 }
 
@@ -44,7 +44,7 @@ impl<'src> Lex<'src> {
     {
         Lex{source : source.as_bytes()}
     }
-/*
+
     ///Get next token from lexer
     pub(crate) fn next(&mut self) -> Token<'src>
     {
@@ -67,13 +67,63 @@ impl<'src> Lex<'src> {
             [b',', ref rest..] => (TokenType::Comma, rest),
             [b':', ref rest..] => (TokenType::Colon, rest),
 
-            //read string
+            //read a string
             [b'"', ref rest..] => Self::read_string(rest),
             
+            //read a number
+            ref rest @ [b'-', ..] | ref rest @ [b'0'..=b'9', ..] => Self::read_number(rest),
+            [b't',b'r',b'u',b'e', ref rest..] => 
+            {
+                match *rest
+                {
+                    [] => (TokenType::Bool(true),rest),
+                    [b,..] if [b' ', b'\t', b'\r', b'\n',b'{',b'}',b'[',b']',b',',b':'].contains(&b) =>
+                    {
+                        (TokenType::Bool(true),rest)
+                    },
+                    _ => (TokenType::Error,rest),
+                }
+            },
+            [b'f',b'a',b'l',b's',b'e', ref rest..] => 
+            {
+                match *rest
+                {
+                    [] => (TokenType::Bool(false),rest),
+                    [b,..] if [b' ', b'\t', b'\r', b'\n',b'{',b'}',b'[',b']',b',',b':'].contains(&b) =>
+                    {
+                        (TokenType::Bool(false),rest)
+                    },
+                    _ => (TokenType::Error,rest),
+                }
+            },
+            [b'n',b'u',b'l',b'l', ref rest..] => 
+            {
+                match *rest
+                {
+                    [] => (TokenType::Null,rest),
+                    [b,..] if [b' ', b'\t', b'\r', b'\n',b'{',b'}',b'[',b']',b',',b':'].contains(&b) =>
+                    {
+                        (TokenType::Null,rest)
+                    },
+                    _ => (TokenType::Error,rest),
+                }
+            },
+            [_,ref rest..] => (TokenType::Error,rest),
+            [ref rest..] => (TokenType::End,rest),
+
         };
 
+        // Build the token's span from the post-whitespace position and the current position.
+        let len = rest.as_ptr() as usize - self.source.as_ptr() as usize;
+        let span = unsafe 
+        {
+            str::from_utf8_unchecked(self.source.get_unchecked(..len))
+        };
+        self.source = rest;
+
+        Token{span, token_type}
     }
-    */
+    
 
 
     fn read_string(mut source : &'src [u8]) -> (TokenType,&'src [u8])
