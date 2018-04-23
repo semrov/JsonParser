@@ -155,27 +155,27 @@ impl<'src> Lex<'src> {
                 //UTF8 codepoints
                 [0x00..=0x7F, ref rest..] => 
                 {
-                    source = rest;
                     let s = unsafe {str::from_utf8_unchecked(source.get_unchecked(..1))};
                     buffer.push_str(s);
+                    source = rest;
                 },
                 [0xC0..=0xDF,0x80..=0xBF, ref rest..] => 
                 {
-                    source = rest;
                     let s = unsafe {str::from_utf8_unchecked(source.get_unchecked(..2))};
                     buffer.push_str(s);
+                    source = rest;
                 },
                 [0xE0..=0xEF, 0x80..=0xBF,0x80..=0xBF, ref rest..] =>
                 {
-                    source = rest;
                     let s = unsafe {str::from_utf8_unchecked(source.get_unchecked(..3))};
                     buffer.push_str(s);
+                    source = rest;
                 },
                 [0xF0..=0xF7,0x80..=0xBF,0x80..=0xBF,0x80..=0xBF, ref rest..] => 
                 {
-                    source = rest;
                     let s = unsafe {str::from_utf8_unchecked(source.get_unchecked(..4))};
                     buffer.push_str(s);
+                    source = rest;
                 },
 
                 //If string is valid utf8 string, then this should not happen
@@ -184,6 +184,8 @@ impl<'src> Lex<'src> {
                 //unterminated string
                  [ref rest..] => return (TokenType::Error,rest),
             }
+
+            println!("Current buffer: {}",buffer);
         }
         (TokenType::String(buffer),source)
     }
@@ -287,10 +289,12 @@ impl<'src> Lex<'src> {
         {
             source = rest;
             let mut any_digits = false;
-            while let [d @ b'0'..=b'9'] = *source {
+            while let [d @ b'0'..=b'9', ref rest..] = *source {
                 let d = (d - b'0') as u64;
                 decimal_part = decimal_part * 10 + d;
                 exp -= 1;
+                any_digits = true;
+                source = rest;
             }
             if !any_digits
             {
