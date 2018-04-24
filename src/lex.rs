@@ -182,7 +182,7 @@ impl<'src> Lex<'src> {
                 [_,_..] => unreachable!(),
 
                 //unterminated string
-                 [ref rest..] => return (TokenType::Error,rest),
+                [ref rest..] => return (TokenType::Error,rest),
             }
 
             println!("Current buffer: {}",buffer);
@@ -358,4 +358,3 @@ impl<'src> Lex<'src> {
         (TokenType::Number(val),source)
     }
 }
-
