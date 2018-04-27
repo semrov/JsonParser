@@ -7,8 +7,8 @@ pub enum JsonValue
 {
     JsonObject(JsonObject),
     JsonArray(JsonArray),
-    Number(f64),
-    String(String),
-    Bool(bool),
+    JsonNumber(f64),
+    JsonString(String),
+    JsonBool(bool),
     Null,
 }
