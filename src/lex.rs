@@ -184,8 +184,6 @@ impl<'src> Lex<'src> {
                 //unterminated string
                 [ref rest..] => return (TokenType::Error,rest),
             }
-
-            println!("Current buffer: {}",buffer);
         }
         (TokenType::String(buffer),source)
     }
